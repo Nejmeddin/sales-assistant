@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sales_assistant
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    profiles: ["prod"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/sales_assistant
+      NODE_ENV: production
+    ports: ["3000:3000"]
+    depends_on:
+      db: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  pgdata:
