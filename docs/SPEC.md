@@ -58,7 +58,7 @@ escalate     ─► email.escalation job ─► mail with "Répondre" link ─�
 | 0 | Repo, DB schema, settings, queue, Meta webhook + Send API | ✅ done |
 | 1 | AI agent (Gemini + Claude adapters), tools, order capture, Sheets daily tabs | ✅ done |
 | 2 | Escalation e-mails, team answer, learning loop, human takeover | ✅ done |
-| 3 | **Dashboard** (React SPA served by the server): overview, inbox, escalations, products, orders, knowledge, settings with "test connection" | ⏭ next |
-| 4 | Source matching: Google Lens (SerpApi) → AliExpress/Alibaba candidates, spec extraction, "not found" alert | planned |
+| 3 | Dashboard FR/EN (React SPA served by the server): overview, inbox, escalations, products, orders, knowledge, settings with "test connection" | ✅ done |
+| 4 | Source matching: Google Lens (SerpApi) → AliExpress/Alibaba candidates, spec extraction, "not found" alert | ⏭ next |
 | 5 | YouCan import (Partner app OAuth), post → product import UI, analytics & AI cost | planned |
 | 6 | Reply to answers by e-mail (inbound parsing), comment auto-replies, multi-user roles | ideas |

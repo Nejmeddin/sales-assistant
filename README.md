@@ -22,6 +22,20 @@ docker compose up -d db       # or set DATABASE_URL to your Neon URL
 pnpm dev                      # http://localhost:3000 — migrations run automatically
 ```
 
+`pnpm dev` starts both apps: the API on **:3000** and the dashboard (hot reload) on **http://localhost:5173**, which proxies `/api` to the server. Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+In production `pnpm build` builds the dashboard and the server, and the server serves the dashboard itself on the same port.
+
+### Dashboard (French / English, light / dark)
+| Page | What you do there |
+|---|---|
+| Vue d'ensemble / Overview | 7-day KPIs, daily activity, setup checklist, pending questions |
+| Conversations | Live inbox (Messenger + Instagram), pause / resume the bot per conversation |
+| Questions à traiter / Questions to handle | Answer escalated questions (link from the e-mail), save the answer as knowledge |
+| Commandes / Orders | Captured orders, Google Sheets sync status, retry, CSV export |
+| Produits / Products | Catalog, options (size/colour), stock, ad/post links, AliExpress link, import from page posts |
+| Base de connaissances / Knowledge | Validated answers reused by the AI (manual or learned) |
+| Paramètres / Settings | AI, assistant behaviour, Meta, e-mails, Google Sheets, product sources — each with a "test connection" button |
+
 Expose it over HTTPS for Meta (free static domain):
 
 ```bash

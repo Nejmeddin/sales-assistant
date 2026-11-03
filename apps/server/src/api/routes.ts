@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { Deps } from "../app/deps.js";
 import { GeminiProvider } from "../agent/providers/gemini.js";
 import { pageCredentials } from "../channels/meta/pages.js";
-import { agentRuns, contacts, conversations, escalations, messages, orders } from "../db/schema.js";
+import { agentRuns, contacts, conversations, escalations, messages, orders, products } from "../db/schema.js";
 import { EscalationService } from "../escalation/service.js";
 import { GoogleSheetsWriter } from "../integrations/sheets.js";
 import { draftFromPost } from "../products/import.js";
@@ -192,7 +192,24 @@ export function apiRoutes(deps: Deps, auth: Auth) {
   // ── Escalations ─────────────────────────────────────────────────────────────
   app.get("/escalations", async (c) => {
     const status = c.req.query("status") as "open" | "answered" | "dismissed" | undefined;
-    return c.json({ escalations: await escalationService.list(status) });
+    const rows = await deps.db
+      .select({ escalation: escalations, contact: contacts, productName: products.name, lastInboundAt: conversations.lastInboundAt })
+      .from(escalations)
+      .innerJoin(conversations, eq(conversations.id, escalations.conversationId))
+      .innerJoin(contacts, eq(contacts.id, conversations.contactId))
+      .leftJoin(products, eq(products.id, escalations.productId))
+      .where(status ? eq(escalations.status, status) : undefined)
+      .orderBy(desc(escalations.createdAt))
+      .limit(200);
+    return c.json({ escalations: rows });
+  });
+  app.get("/escalations/:id", async (c) => {
+    const escalation = await escalationService.get(c.req.param("id"));
+    if (!escalation) throw new HttpError(404, "Escalation not found");
+    const found = await deps.conversations.getWithContact(escalation.conversationId);
+    const product = escalation.productId ? await deps.products.get(escalation.productId) : undefined;
+    const history = await deps.conversations.history(escalation.conversationId, 30);
+    return c.json({ escalation, ...found, product: product ?? null, messages: history });
   });
   app.post("/escalations/:id/answer", async (c) => {
     const input = await body(
@@ -219,11 +236,15 @@ export function apiRoutes(deps: Deps, auth: Auth) {
   // ── Orders ──────────────────────────────────────────────────────────────────
   app.get("/orders", async (c) => {
     const status = c.req.query("status") as (typeof orders.$inferSelect)["status"] | undefined;
-    const rows = await deps.db.query.orders.findMany({
-      where: status ? eq(orders.status, status) : sql`${orders.status} <> 'draft'`,
-      orderBy: desc(orders.createdAt),
-      limit: 500,
-    });
+    const rows = await deps.db
+      .select({ order: orders, productName: products.name, price: products.price, currency: products.currency, channel: contacts.channel })
+      .from(orders)
+      .innerJoin(conversations, eq(conversations.id, orders.conversationId))
+      .innerJoin(contacts, eq(contacts.id, conversations.contactId))
+      .leftJoin(products, eq(products.id, orders.productId))
+      .where(status ? eq(orders.status, status) : sql`${orders.status} <> 'draft'`)
+      .orderBy(desc(orders.createdAt))
+      .limit(500);
     return c.json({ orders: rows });
   });
   app.post("/orders/:id/resync", async (c) => {
@@ -265,7 +286,21 @@ export function apiRoutes(deps: Deps, auth: Auth) {
       .groupBy(agentRuns.outcome);
     const [submitted] = await deps.db.select({ n: count() }).from(orders).where(and(sql`${orders.status} <> 'draft'`, gte(orders.createdAt, since)));
     const [openEsc] = await deps.db.select({ n: count() }).from(escalations).where(eq(escalations.status, "open"));
-    return c.json({ days, inboundMessages: inbound?.n ?? 0, runs, orders: submitted?.n ?? 0, openEscalations: openEsc?.n ?? 0 });
+    const [convs] = await deps.db.select({ n: count() }).from(conversations).where(gte(conversations.createdAt, since));
+    const perDay = await deps.db.execute<{ day: string; messages: number; orders: number }>(sql`
+      SELECT to_char(d, 'YYYY-MM-DD') AS day,
+        (SELECT count(*)::int FROM messages m WHERE m.direction = 'in' AND m.created_at >= d AND m.created_at < d + interval '1 day') AS messages,
+        (SELECT count(*)::int FROM orders o WHERE o.status <> 'draft' AND o.submitted_at >= d AND o.submitted_at < d + interval '1 day') AS orders
+      FROM generate_series(date_trunc('day', now()) - (${days - 1} * interval '1 day'), date_trunc('day', now()), interval '1 day') d`);
+    return c.json({
+      days,
+      inboundMessages: inbound?.n ?? 0,
+      newConversations: convs?.n ?? 0,
+      runs,
+      orders: submitted?.n ?? 0,
+      openEscalations: openEsc?.n ?? 0,
+      perDay: perDay.rows,
+    });
   });
 
   return app;
