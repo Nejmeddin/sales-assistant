@@ -39,8 +39,22 @@ function AiForm({ v, set }: { v: Settings["ai"]; set: (v: Settings["ai"]) => voi
       <Field label={t("settings.ai.geminiKey")} hint={<a className="text-brand-600 hover:underline" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">{t("settings.ai.geminiHint")}</a>}>
         <SecretInput value={v.gemini.apiKey} onChange={(apiKey) => set({ ...v, gemini: { ...v.gemini, apiKey } })} placeholder="AIza…" />
       </Field>
-      <Field label={`${t("settings.ai.model")} (Gemini)`}>
-        <Input value={v.gemini.model} onChange={(e) => set({ ...v, gemini: { ...v.gemini, model: e.target.value } })} list="gemini-models" />
+      <div className="grid grid-cols-[1fr_120px] gap-3">
+        <Field label={`${t("settings.ai.model")} (Gemini)`}>
+          <Input value={v.gemini.model} onChange={(e) => set({ ...v, gemini: { ...v.gemini, model: e.target.value } })} list="gemini-models" />
+        </Field>
+        <Field label={t("settings.ai.effort")}>
+          <Select value={v.gemini.thinkingLevel} onChange={(e) => set({ ...v, gemini: { ...v.gemini, thinkingLevel: e.target.value as Settings["ai"]["gemini"]["thinkingLevel"] } })}>
+            {(["MINIMAL", "LOW", "MEDIUM", "HIGH"] as const).map((l) => (
+              <option key={l} value={l}>
+                {l.toLowerCase()}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+      <Field label={t("settings.ai.fallbackModels")} hint={t("settings.ai.fallbackModelsHint")} className="sm:col-span-2">
+        <Input value={v.gemini.fallbackModels.join(", ")} onChange={(e) => set({ ...v, gemini: { ...v.gemini, fallbackModels: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) } })} />
       </Field>
       <Field label={t("settings.ai.anthropicKey")} hint={<a className="text-brand-600 hover:underline" href="https://console.anthropic.com/" target="_blank" rel="noreferrer">{t("settings.ai.anthropicHint")}</a>}>
         <SecretInput value={v.anthropic.apiKey} onChange={(apiKey) => set({ ...v, anthropic: { ...v.anthropic, apiKey } })} placeholder="sk-ant-…" />

@@ -26,6 +26,8 @@ export type AgentResult = {
   usage: { inputTokens: number; outputTokens: number };
   /** "refused": the model declined (safety). "max_steps": tool loop did not converge. */
   finish: "stop" | "refused" | "max_steps";
+  /** Model that actually served the run (may be a fallback). */
+  model?: string;
 };
 
 /**

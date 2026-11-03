@@ -51,7 +51,18 @@ escalate     ─► email.escalation job ─► mail with "Répondre" link ─�
 - Phone validation with libphonenumber (default country TN), option values validated against the product variants, `submit_order` refuses incomplete orders and out-of-stock products.
 - Secrets encrypted at rest and masked in API responses; webhook signature mandatory.
 
-## 5. Roadmap
+## 5. Live evaluation results (real Gemini, `pnpm --filter server eval:live`)
+
+| Iteration | Change | Checks | Avg reply |
+|---|---|---|---|
+| 1 | default `gemini-2.5-flash` | 0/14 — model closed to new accounts (404) → every message escalated | — |
+| 2 | default `gemini-3.8-flash` | 4/14 — 503 "high demand" + 5 req/min free quota | — |
+| 3 | model fallback chain + proper wait in eval | 14/14 | 12.5 s |
+| 4 | invitation-once scenario, thinking `LOW`, model cooldown | 15/16 | 15.5 s (quota waits) |
+| 5 | skip rate-limited models instead of waiting, 20 s request timeout (SDK has none) | 15/16 | **1.7 s** |
+| 6 | invitation tracked server-side + per-turn context hint | **16/16** (twice) | 1.9 s |
+
+## 6. Roadmap
 
 | Phase | Content | Status |
 |---|---|---|

@@ -197,6 +197,8 @@ const en: Dictionary = {
       maxSteps: "Max tool steps per reply",
       history: "History messages sent to the AI",
       models: "Available models",
+      fallbackModels: "Gemini fallback models",
+      fallbackModelsHint: "Comma-separated, tried in order when the main model is overloaded or out of quota (free quota is per model).",
     },
     bot: {
       enabled: "Assistant enabled",

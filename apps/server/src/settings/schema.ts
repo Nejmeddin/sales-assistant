@@ -14,9 +14,13 @@ export const AiSettings = z.object({
   gemini: z
     .object({
       apiKey: z.string().default(""),
-      model: z.string().default("gemini-2.5-flash"),
+      model: z.string().default("gemini-3.8-flash"),
+      /** Tried in order when the main model is overloaded / out of free quota (quotas are per model). */
+      fallbackModels: z.array(z.string()).default(["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]),
+      /** Gemini 3 reasoning depth: lower = faster replies. LOW suits chat. */
+      thinkingLevel: z.enum(["MINIMAL", "LOW", "MEDIUM", "HIGH"]).default("LOW"),
     })
-    .default({ apiKey: "", model: "gemini-2.5-flash" }),
+    .default({ apiKey: "", model: "gemini-3.8-flash", fallbackModels: ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"], thinkingLevel: "LOW" }),
   anthropic: z
     .object({
       apiKey: z.string().default(""),

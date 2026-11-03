@@ -1,0 +1,1 @@
+ALTER TABLE "conversations" ADD COLUMN "order_invitation_sent" boolean DEFAULT false NOT NULL;

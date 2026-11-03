@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx --env-file-if-exists=../../.env src/db/migrate.ts"
+    "db:migrate": "tsx --env-file-if-exists=../../.env src/db/migrate.ts",
+    "eval:live": "tsx scripts/live-eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",

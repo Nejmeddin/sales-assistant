@@ -121,6 +121,8 @@ export const conversations = pgTable(
     status: conversationStatusEnum("status").notNull().default("active"),
     stage: conversationStageEnum("stage").notNull().default("answering"),
     currentProductId: uuid("current_product_id").references(() => products.id, { onDelete: "set null" }),
+    /** The "send your name, city, phone to order" invitation was already sent (it is sent once). */
+    orderInvitationSent: boolean("order_invitation_sent").notNull().default(false),
     /** Set when a human answers from Meta Business Suite: the bot stays quiet until then. */
     botPausedUntil: timestamp("bot_paused_until", { withTimezone: true }),
     lastInboundAt: timestamp("last_inbound_at", { withTimezone: true }),

@@ -113,3 +113,69 @@ describe("job queue", () => {
     expect(seen).toEqual([{ v: 2 }]);
   });
 });
+
+describe("gemini fallback helpers", async () => {
+  const { orderByAvailability, retryDelayMs, resetModelCooldowns } = await import("../src/agent/providers/gemini.js");
+  const { ApiError } = await import("@google/genai");
+
+  it("keeps the configured order when no model is cooling down", () => {
+    resetModelCooldowns();
+    expect(orderByAvailability(["a", "b", "c"])).toEqual(["a", "b", "c"]);
+  });
+
+  it("uses the server-suggested retry delay, bounded", () => {
+    const err = new ApiError({ status: 429, message: "Quota exceeded… Please retry in 3.5s." });
+    expect(retryDelayMs(err, 0)).toBe(3500);
+    expect(retryDelayMs(new ApiError({ status: 429, message: "retry in 99s" }), 0)).toBe(15_000);
+    expect(retryDelayMs(new ApiError({ status: 503, message: "overloaded" }), 1)).toBe(2000);
+  });
+});
+
+describe("gemini model selection", () => {
+  it("falls back immediately on quota/overload, then sticks to the serving model for the tool loop", async () => {
+    const { GeminiProvider, resetModelCooldowns } = await import("../src/agent/providers/gemini.js");
+    const { ApiError } = await import("@google/genai");
+    resetModelCooldowns();
+    const calls: string[] = [];
+    const sleeps: number[] = [];
+    const provider = new GeminiProvider("k", "main", ["backup1", "backup2"], { sleep: async (ms) => void sleeps.push(ms) });
+    let backup2Calls = 0;
+    (provider as unknown as { client: { models: { generateContent: (p: { model: string }) => Promise<unknown> } } }).client.models.generateContent = async ({ model }) => {
+      calls.push(model);
+      if (model === "main") throw new ApiError({ status: 503, message: "high demand" });
+      if (model === "backup1") throw new ApiError({ status: 429, message: "Please retry in 2s." });
+      backup2Calls++;
+      if (backup2Calls === 1) return { functionCalls: [{ id: "1", name: "noop", args: {} }], candidates: [{ content: { role: "model", parts: [{ functionCall: { name: "noop", args: {} } }] } }] };
+      return { text: "ok", candidates: [{ content: { role: "model", parts: [{ text: "ok" }] } }] };
+    };
+    const res = await provider.runAgent({
+      system: "s",
+      messages: [{ role: "user", parts: [{ type: "text", text: "hi" }] }],
+      tools: [{ name: "noop", description: "d", inputSchema: { type: "object", properties: {} } }],
+      executeTool: async () => ({ ok: true }),
+      maxSteps: 4,
+    });
+    expect(res).toMatchObject({ text: "ok", model: "backup2", finish: "stop" });
+    expect(calls).toEqual(["main", "backup1", "backup2", "backup2"]);
+    expect(sleeps).toEqual([]); // never waited: a model with quota was available
+
+    // Next run skips the cooled-down models entirely.
+    calls.length = 0;
+    await provider.runAgent({ system: "s", messages: [{ role: "user", parts: [{ type: "text", text: "hi" }] }], tools: [], executeTool: async () => null, maxSteps: 2 });
+    expect(calls).toEqual(["backup2"]);
+  });
+});
+
+describe("gemini timeouts", () => {
+  it("treats a hung model like an overload and falls back", async () => {
+    const { GeminiProvider, resetModelCooldowns } = await import("../src/agent/providers/gemini.js");
+    resetModelCooldowns();
+    const provider = new GeminiProvider("k", "slow", ["fast"]);
+    (provider as unknown as { client: { models: { generateContent: (p: { model: string }) => Promise<unknown> } } }).client.models.generateContent = async ({ model }) => {
+      if (model === "slow") throw Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" });
+      return { text: "ok", candidates: [{ content: { role: "model", parts: [{ text: "ok" }] } }] };
+    };
+    const res = await provider.runAgent({ system: "s", messages: [{ role: "user", parts: [{ type: "text", text: "hi" }] }], tools: [], executeTool: async () => null, maxSteps: 1 });
+    expect(res.model).toBe("fast");
+  });
+});

@@ -68,7 +68,7 @@ export class AnthropicProvider implements LlmProvider {
       usage.inputTokens += response.usage.input_tokens + (response.usage.cache_read_input_tokens ?? 0) + (response.usage.cache_creation_input_tokens ?? 0);
       usage.outputTokens += response.usage.output_tokens;
 
-      if (response.stop_reason === "refusal") return { text: "", toolCalls, usage, finish: "refused" };
+      if (response.stop_reason === "refusal") return { text: "", toolCalls, usage, finish: "refused", model: this.model };
 
       const text = response.content
         .filter((b): b is Anthropic.TextBlock => b.type === "text")
@@ -78,7 +78,7 @@ export class AnthropicProvider implements LlmProvider {
 
       const toolUses = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
       if (response.stop_reason !== "tool_use" || toolUses.length === 0) {
-        return { text, toolCalls, usage, finish: "stop" };
+        return { text, toolCalls, usage, finish: "stop", model: this.model };
       }
 
       // Append the full assistant content (incl. thinking blocks) unchanged.

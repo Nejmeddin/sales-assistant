@@ -195,6 +195,8 @@ const fr = {
       maxSteps: "Étapes d'outils max. par réponse",
       history: "Messages d'historique envoyés à l'IA",
       models: "Modèles disponibles",
+      fallbackModels: "Modèles Gemini de secours",
+      fallbackModelsHint: "Séparés par des virgules, essayés dans l'ordre si le modèle principal est saturé ou hors quota (quota gratuit par modèle).",
     },
     bot: {
       enabled: "Assistant activé",

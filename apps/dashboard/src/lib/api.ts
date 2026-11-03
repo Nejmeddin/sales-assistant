@@ -138,7 +138,7 @@ export type Settings = {
   ai: {
     provider: "gemini" | "anthropic";
     fallbackProvider: "none" | "gemini" | "anthropic";
-    gemini: { apiKey: string; model: string };
+    gemini: { apiKey: string; model: string; fallbackModels: string[]; thinkingLevel: "MINIMAL" | "LOW" | "MEDIUM" | "HIGH" };
     anthropic: { apiKey: string; model: string; effort: "low" | "medium" | "high" };
     maxToolSteps: number;
     historyLimit: number;

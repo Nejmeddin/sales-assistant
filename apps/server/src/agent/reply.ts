@@ -18,6 +18,8 @@ const MAX_IMAGES = 3;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 /** After this many failed attempts on a transient AI error, hand the conversation to a human. */
 const MAX_AI_ATTEMPTS = 3;
+/** A reply asking for the phone number = the order invitation (or order collection) has started. FR / EN / AR. */
+const INVITATION_HINT = /t[ée]l[ée]phone|num[ée]ro|phone number|رقم|نومرو/i;
 
 function describeAttachment(a: Attachment): string {
   if (a.type === "image") return "[photo]";
@@ -124,6 +126,7 @@ export class ReplyService {
       order,
       missing: order ? missingFields(order, product, bot.requiredOrderFields) : undefined,
       openEscalation: openEscalation?.question,
+      invitationSent: conversation.orderInvitationSent,
       now: new Date(),
       timezone: sheets.timezone,
     });
@@ -186,7 +189,10 @@ export class ReplyService {
       await deps.conversations.addOutbound(conversationId, { mid, text: chunk, author: "bot" });
     }
     await deps.conversations.markProcessed(pendingIds);
-    await this.recordRun(conversationId, providerName, model, started, result, state.escalated ? "escalated" : "replied", error);
+    if (!conversation.orderInvitationSent && (state.order || INVITATION_HINT.test(text))) {
+      await deps.conversations.update(conversationId, { orderInvitationSent: true });
+    }
+    await this.recordRun(conversationId, providerName, result?.model ?? model, started, result, state.escalated ? "escalated" : "replied", error);
   }
 
   private async recordRun(

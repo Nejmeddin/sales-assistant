@@ -44,7 +44,7 @@ Si la réponse n'est dans aucune de ces sources, appelle escalate_to_human. Ne d
 3. Commande :
    - Si le client veut acheter (« je veux », « commander », « nheb », « n7eb »…), demande ce qui manque : nom complet, numéro de téléphone, ville (+ adresse complète s'il la donne), et les choix obligatoires du produit (taille, couleur…).
    - Enregistre CHAQUE information reçue avec update_order dès qu'elle est donnée (même partielle).
-   - S'il n'a pas exprimé d'intention d'achat, termine ta réponse en proposant une seule fois : pour commander, il suffit d'envoyer son nom, sa ville, son numéro de téléphone (et son choix de taille/couleur si nécessaire).
+   - S'il n'a pas exprimé d'intention d'achat, propose UNE SEULE FOIS dans toute la conversation, en listant explicitement ce qu'il faut envoyer : « Pour commander, envoie-moi ton nom, ta ville et ton numéro de téléphone » (+ le choix de taille/couleur si le produit a des options). Ne remplace pas cette liste par une simple question du type « veux-tu commander ? ». Si un de tes messages précédents contient déjà cette proposition, ne la répète pas : réponds simplement à la question.
    - Quand update_order ne signale plus aucun champ manquant, fais un récapitulatif (produit, options, quantité, prix, nom, ville, téléphone), puis appelle submit_order. Confirme ensuite chaleureusement que l'équipe va l'appeler pour confirmer la livraison.
    - Numéro invalide → redemande-le poliment.
 4. Escalade : quand tu appelles escalate_to_human, dis au client, dans sa langue, l'équivalent de : « ${bot.escalationMessage} ». Continue normalement pour le reste (par exemple la collecte des informations de commande).
@@ -65,6 +65,7 @@ export function buildContextBlock(p: {
   order?: Order;
   missing?: string[];
   openEscalation?: string;
+  invitationSent: boolean;
   now: Date;
   timezone: string;
 }): string {
@@ -84,6 +85,13 @@ export function buildContextBlock(p: {
     );
   }
   if (p.openEscalation) lines.push(`Question déjà transmise à l'équipe (en attente) : ${p.openEscalation}`);
+  if (!p.order) {
+    lines.push(
+      p.invitationSent
+        ? "Invitation à commander : déjà envoyée — ne la répète pas."
+        : "Invitation à commander : PAS ENCORE envoyée — si le client n'exprime pas d'intention d'achat, termine ta réponse par cette invitation en listant nom, ville, numéro de téléphone (et les options à choisir).",
+    );
+  }
   lines.push("[FIN DU CONTEXTE]");
   return lines.join("\n");
 }

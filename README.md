@@ -50,13 +50,25 @@ Run the tests (they use a local Postgres and fake AI / Meta / Sheets):
 pnpm test
 ```
 
+Live evaluation against the **real** AI (Meta, Sheets and e-mail stay fake — nothing is sent): 7 scripted conversations (ad → order, escalation, knowledge reuse, invitation once, out of stock, English client, prompt injection), 16 checks, latency and token report:
+
+```bash
+GEMINI_API_KEY=... pnpm --filter server eval:live
+```
+
+```bash
+ANTHROPIC_API_KEY=... EVAL_PROVIDER=anthropic pnpm --filter server eval:live
+```
+
 ## Configuration checklist
 
 ### 1. AI provider
 | Phase | Provider | Where to get the key |
 |---|---|---|
-| Test (free) | Gemini — `gemini-2.5-flash` by default | [Google AI Studio → API keys](https://aistudio.google.com/apikey) |
+| Test (free) | Gemini — `gemini-3.8-flash` by default | [Google AI Studio → API keys](https://aistudio.google.com/apikey) |
 | Production | Claude Haiku — `claude-haiku-5-5` | [Anthropic Console](https://console.anthropic.com/) |
+
+**Gemini free tier, measured on a new key (Nov 2026):** `gemini-2.5-flash` is closed to new accounts; quota is **5 requests/minute per model**, and the newest models are often "high demand" (503). The adapter therefore walks a **fallback chain** (`gemini-3.8-flash → 3.6-flash → 3.5-flash → 3.5-flash-lite → 3.1-flash-lite`, editable in the dashboard): an overloaded / rate-limited / slow (>20 s) model hands over immediately and is skipped for a while. Each model has its own quota, so the chain gives roughly 5 × 5 = 25 requests/min (≈ 10 client replies/min) for free. Gemini 3 reasoning is set to `LOW` for fast chat replies.
 
 Switch with `PUT /api/settings/ai` (`provider: "gemini" | "anthropic"`), optionally with the other one as `fallbackProvider`. `POST /api/settings/test/ai` checks the key and lists the Gemini models available to you.
 

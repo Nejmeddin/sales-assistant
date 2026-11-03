@@ -6,7 +6,7 @@ import { ProviderError, type AgentRequest, type AgentResult, type LlmProvider } 
 export * from "./types.js";
 
 function build(kind: "gemini" | "anthropic", ai: Settings["ai"]): LlmProvider | undefined {
-  if (kind === "gemini") return ai.gemini.apiKey ? new GeminiProvider(ai.gemini.apiKey, ai.gemini.model) : undefined;
+  if (kind === "gemini") return ai.gemini.apiKey ? new GeminiProvider(ai.gemini.apiKey, ai.gemini.model, ai.gemini.fallbackModels, { thinkingLevel: ai.gemini.thinkingLevel }) : undefined;
   return ai.anthropic.apiKey ? new AnthropicProvider(ai.anthropic.apiKey, ai.anthropic.model, ai.anthropic.effort) : undefined;
 }
 

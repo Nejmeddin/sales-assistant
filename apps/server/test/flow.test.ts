@@ -40,6 +40,7 @@ describe("conversation flow", () => {
       // Turn 1: client asks about the ad product.
       async (req: import("../src/agent/providers/types.js").AgentRequest) => {
         expect(textOf(req)).toContain(`Produit concerné : [${product.id}]`);
+        expect(textOf(req)).toContain("Invitation à commander : PAS ENCORE envoyée");
         expect(req.system).toContain("Robe d'été fleurie");
         const details = (await req.executeTool("get_product", { product_id: product.id })) as { available: boolean };
         expect(details.available).toBe(true); // inStock not filled ⇒ available
@@ -81,6 +82,9 @@ describe("conversation flow", () => {
 
     const conv = await app.db.query.conversations.findFirst();
     expect(conv?.stage).toBe("ordered");
+    expect(conv?.orderInvitationSent).toBe(true);
+    // The second turn's context told the AI the invitation was already sent.
+    expect(app.provider.requests[1]!.messages.at(-1)!.parts[0]).toMatchObject({ type: "text" });
     expect(await app.db.select().from(agentRuns)).toHaveLength(2);
   });
 
